@@ -3,6 +3,8 @@
 #include "ArduinoNanoBLE33_Watchdog.h"
 #include <math.h>
 #include <ArduinoBLE.h>
+#include <Arduino.h>
+#include "ArduinoNanoBLE33_Timer0.h"
 
 /**************************************
  * Compilation Adders
@@ -10,6 +12,57 @@
 //#define __DEBUG__           //Adds writing to the USB Serial Port
 #define __WDT__             //Adds configuring the Watchdog Timer
 
+/**************************************
+ * BLE Duty Cycle
+ **************************************/
+#define BLE_ON_TIME_SECONDS 5  //How long to leave on BLE Advertise
+#define DELAY_TIME_SECONDS 15  //How long to wait before re-enabling BLE
+/**************************************
+ * Timer Code
+ ***************************************/
+ 
+Nano33TIMER timer; //Timer
+uint32_t counter = 0;
+bool SerialOut = false;
+
+#define TIM_SCALAR 512 //Used for the Calculation of  (2^PRESCALAR: 2 ^ 9 = 512)
+#define TIM_CLK 16000000 //Clock Frequency for the Timer (16 MHz)
+#define TIM_SEC (DELAY_TIME_SECONDS) //Amount of time to wait in Seconds for TIM_COMPARE Calculation
+#define TIM_COMPARE ((TIM_CLK / TIM_SCALAR) * TIM_SEC) //Calculate a TIM_Compare
+#define TIM_COMPARE_CALC(seconds) ((TIM_CLK / TIM_SCALAR) * seconds) //Macro for Comparator for Timer
+bool Runnow = true;
+
+
+/**************************************
+ * Disable UART
+ **************************************/
+int main(void){
+init();
+initVariant();
+
+//Disabling UART0 (saves around 300-500µA) - @Jul10199555 contribution
+NRF_UART0->TASKS_STOPTX = 1;
+NRF_UART0->TASKS_STOPRX = 1;
+NRF_UART0->ENABLE = 0;
+
+*(volatile uint32_t *)0x40002FFC = 0;
+*(volatile uint32_t *)0x40002FFC;
+*(volatile uint32_t *)0x40002FFC = 1; //Setting up UART registers again due to a library issue
+
+//Removing USB CDC feature
+//#if defined(SERIAL_CDC)
+//  PluggableUSBD().begin();
+//  SerialUSB.begin(115200);
+//#endif
+
+  setup();
+  for(;;){
+    loop();
+//If you won't be using serial communication comment next line
+//    if(arduino::serialEventRun) arduino::serialEventRun();
+  }
+  return 0;
+}
 /**************************************
  * TILT Color Definitions
  **************************************/
@@ -22,7 +75,7 @@
 #define TILT_YLW            0x70
 #define TILT_PNK            0x80
 
-#define TILT_COLOR          TILT_BLK //Choose which color to report as
+#define TILT_COLOR          TILT_GRN //Choose which color to report as
 #define TILT_COLOR_UUID_LOC 3        //Location in UUID that represents color: shouldn't need to be changed
 
 Nano33BLEAccelerometerData accelerometerData;
@@ -37,16 +90,17 @@ int count = 1;  //Number of packets sent
 
 #include "ArduinoNanoBLE33_Watchdog.h"
 Nano33Watchdog WDT;
-#define WATCHDOG_TIMER_SECONDS 60  //How much time must pass before resetting the micro
+#define WATCHDOG_TIMER_SECONDS 180  //How much time must pass before resetting the micro
 
 #endif
 
-/**************************************
- * BLE Duty Cycle
- **************************************/
-#define BLE_ON_TIME_SECONDS 5  //How long to leave on BLE Advertise
-#define DELAY_TIME_SECONDS 10  //How long to wait before re-enabling BLE
 
+void chan_0_callback(void)
+{
+  Runnow = true;
+  timer.clearEvent(0); //Clear the Triggered Event
+  timer.restartTimer(); //Restart the counter on the timer
+}
 
 void string_to_byte(String _uuid, byte bytes[]) //voodoo black magic that I took from some other code and had a software engineer help make work better
 {
@@ -92,12 +146,13 @@ float angle()
 }
 
 int angle_to_sg(){
-  float ang = angle();
-  float sg = -1.52624*ang + 1104;
+  int ang = angle()*100;
+  int sg = -0.0119*ang + 1099;
   int rsg = sg;
   return(rsg);
 }
 /*int temperature()
+ * IN PROGRESS
 {
   int temp;
   if(Temperature.pop(temperatureData))
@@ -116,6 +171,7 @@ void setup() {
 
   //Disable LEDs
   pinMode(LED_BUILTIN, OUTPUT); //sets the L led to low
+  digitalWrite(LED_BUILTIN, LOW);
   digitalWrite(LED_PWR, LOW); //sets the power LED to low
 
   //Convert UUID to a byte array
@@ -125,16 +181,21 @@ void setup() {
 
   //Turn on Accelerometer and BLE
   Accelerometer.begin();
-  BLE.begin();
+  //BLE.begin();
+  timer.setTimer(3,9);  //Configure the BitMode (3 - 32 Bit) and Prescalar (9: 2 ^ 9 = 512)
+  timer.setChannel(0,TIM_COMPARE_CALC(2)); //Set Channel 0 to trigger on 2 Seconds
+  timer.RegisterCallback(chan_0_callback, 0); //Register the Callback Function for the Interrupt
+  timer.begin(); //Start the Timer
 
-#ifdef __DEBUG__
-  Serial.begin(9600);
-#endif
 
-#ifdef __WDT__
-  WDT.setTimerSeconds(WATCHDOG_TIMER_SECONDS);
-  WDT.begin();
-#endif
+  #ifdef __DEBUG__
+    Serial.begin(9600);
+  #endif
+
+  #ifdef __WDT__
+    WDT.setTimerSeconds(WATCHDOG_TIMER_SECONDS);
+    WDT.begin();
+  #endif
 }
 
 void update(int* ang, int* specgrav)
@@ -148,6 +209,9 @@ void update(int* ang, int* specgrav)
 
 void loop() 
 { // main stuff
+  digitalWrite(PIN_ENABLE_SENSORS_3V3, HIGH);
+  digitalWrite(PIN_ENABLE_I2C_PULLUP, HIGH);
+  BLE.begin();
   int majdat, mindat;
   update(&majdat, &mindat);
   byte major[2];
@@ -172,6 +236,21 @@ void loop()
 #ifdef __WDT__
   WDT.kick();
 #endif
+digitalWrite(PIN_ENABLE_SENSORS_3V3, LOW);
+digitalWrite(PIN_ENABLE_I2C_PULLUP, LOW);
+BLE.end();
+//NRF_POWER -> SYSTEMOFF = 1;
+while(!Runnow){
+  __WFI();
+}
+Runnow = false;
 
-  delay(DELAY_TIME_SECONDS * 1000);
+}
+
+extern "C"
+{
+    void TIMER0_IRQHandler_v (void)  //Interrupt Handler for Timer0
+    {
+        timer.TIMER0_ISR(); //Call the API's Interrupt Routine, so it can choose the function to run.
+    }
 }

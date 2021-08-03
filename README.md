@@ -7,7 +7,9 @@
 
 
 ## Part List:
-Arduino Nano 33BLE: (make sure to get the Arduino WITHOUT headers)
+
+
+*Arduino Nano 33BLE*: (make sure to get the Arduino WITHOUT headers)
  https://store.arduino.cc/usa/nano-33-ble
  
  

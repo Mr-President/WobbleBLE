@@ -1,5 +1,8 @@
 # Wobble on Arduino Nano 33 BLE
 ## Introduction:
+
+First and formost let me caviate this all by saying I am not a software engineer so the code contained here is likely rough. The higest quality portion is the watchdog written by Acellama88.
+
   The wobble is another in a long list of open-source DIY floating hydrometers designed to be left in beer while it ferments. This implementation leverages the capabilities of the Arduino Nano 33BLE communicate specific gravity and temperature readings through low power Bluetooth. The information is communicated via the iBeacon standard where specific gravity is in the primary variable and angle in the secondary variable. This is similar to existing commercialized products in the market and can be read via their software. The exception is that the temperature reading will be in the 1000s and represent an angle. For example 8345 is an angle of 83.45 degrees. Data can also be read manually using any iBeacon scanner.
 
   There is a commercialized product that offers similar functionality currently on the market, but the design here offers a significant cost savings if you can complete the build. You will need some competency with soldering, 3D printing, and possibly excel linear regression. Please note that the accuracy of the measurement will depend on quality of the build and your commitment to getting a high accuracy linear fit. In its current state this device is more for monitoring activity than getting highly accurate readings. I will continue to make changes and update as I have time, so please pass on suggestions if you have them!
@@ -63,5 +66,9 @@ I would recommend that you always remove the battery from the device when you ar
 ## Future:
 
 The biggest step forward in this project would be a decrease in power consumption and improve accuracy of reading. Unfortunately, I believe that I have hit the lowest power consumption I can without implementing an external resonator or timer of some kind. I wanted to make this project as simple part wise as possible, so this is out of the question. If you happen to see this and do see a way to reduce power consumption, please feel free to raise an issue or message me directly
+
+
 As for accuracy in the future I would like to look at an averaging system to take several readings quickly average them and then use that for the angle value. 
-At this time information from the device can only be read using either an iBeacon scanner or already existing applications and raspberry pi builds for a similar commercialized product. I intend to start work on a raspberry pi application that will serve a similar purpose and integrate with brewfather software.
+
+
+At this time information from the device can only be read using either an iBeacon scanner or already existing applications and raspberry pi builds for a similar commercialized product. I intend to start work on a raspberry pi application that will serve a similar purpose and integrate with brewfather software but there is a lot of learning I need to do first. 

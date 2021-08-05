@@ -4,7 +4,6 @@
 #include <math.h>
 #include <ArduinoBLE.h>
 #include <Arduino.h>
-#include "ArduinoNanoBLE33_Timer0.h"
 
 /**************************************
  * Compilation Adders
@@ -17,21 +16,6 @@
  **************************************/
 #define BLE_ON_TIME_SECONDS 5  //How long to leave on BLE Advertise
 #define DELAY_TIME_SECONDS 15  //How long to wait before re-enabling BLE
-/**************************************
- * Timer Code
- ***************************************/
- 
-Nano33TIMER timer; //Timer
-uint32_t counter = 0;
-bool SerialOut = false;
-
-#define TIM_SCALAR 512 //Used for the Calculation of  (2^PRESCALAR: 2 ^ 9 = 512)
-#define TIM_CLK 16000000 //Clock Frequency for the Timer (16 MHz)
-#define TIM_SEC (DELAY_TIME_SECONDS) //Amount of time to wait in Seconds for TIM_COMPARE Calculation
-#define TIM_COMPARE ((TIM_CLK / TIM_SCALAR) * TIM_SEC) //Calculate a TIM_Compare
-#define TIM_COMPARE_CALC(seconds) ((TIM_CLK / TIM_SCALAR) * seconds) //Macro for Comparator for Timer
-bool Runnow = true;
-
 
 /**************************************
  * Disable UART
@@ -63,6 +47,7 @@ NRF_UART0->ENABLE = 0;
   }
   return 0;
 }
+
 /**************************************
  * TILT Color Definitions
  **************************************/
@@ -75,7 +60,7 @@ NRF_UART0->ENABLE = 0;
 #define TILT_YLW            0x70
 #define TILT_PNK            0x80
 
-#define TILT_COLOR          TILT_GRN //Choose which color to report as
+#define TILT_COLOR          TILT_BLK //Choose which color to report as
 #define TILT_COLOR_UUID_LOC 3        //Location in UUID that represents color: shouldn't need to be changed
 
 Nano33BLEAccelerometerData accelerometerData;
@@ -94,13 +79,6 @@ Nano33Watchdog WDT;
 
 #endif
 
-
-void chan_0_callback(void)
-{
-  Runnow = true;
-  timer.clearEvent(0); //Clear the Triggered Event
-  timer.restartTimer(); //Restart the counter on the timer
-}
 
 void string_to_byte(String _uuid, byte bytes[]) //voodoo black magic that I took from some other code and had a software engineer help make work better
 {
@@ -130,13 +108,14 @@ void transmit(byte _uuid[16], byte _major[2], byte _minor[2]) //function transmi
 
 float angle()
 {
+  Accelerometer.begin();
   float angle;
     if(Accelerometer.pop(accelerometerData))
     {
       float x = accelerometerData.x; //get x y z data and put them into variables
       float y = accelerometerData.y;
       float z = accelerometerData.z;
-      float mag = sqrt(sq(x) + sq(y) + sq(z)); // find the magnitude of the overall vector
+      float mag = 1; // magnitude of the full vector should be 1
       float xmag = abs(x); // abosolute value of x because its fucked
       float oh = xmag / mag; // ratio of opposite(the x value) and the hypotonuse (the total vector length)
       float degree = asin(oh); //arcsine returns the angle this makes to the perpendicular 
@@ -147,12 +126,12 @@ float angle()
 
 int angle_to_sg(){
   int ang = angle()*100;
-  int sg = -0.0119*ang + 1099;
-  int rsg = sg;
-  return(rsg);
+  int sg = -.069725*ang + 1560.3;
+  return(sg);
 }
+
 /*int temperature()
- * IN PROGRESS
+  IN PROGRESS
 {
   int temp;
   if(Temperature.pop(temperatureData))
@@ -179,15 +158,6 @@ void setup() {
   //Set Tilt App color in UUID
   _uuidarray[TILT_COLOR_UUID_LOC] = TILT_COLOR;
 
-  //Turn on Accelerometer and BLE
-  Accelerometer.begin();
-  //BLE.begin();
-  timer.setTimer(3,9);  //Configure the BitMode (3 - 32 Bit) and Prescalar (9: 2 ^ 9 = 512)
-  timer.setChannel(0,TIM_COMPARE_CALC(2)); //Set Channel 0 to trigger on 2 Seconds
-  timer.RegisterCallback(chan_0_callback, 0); //Register the Callback Function for the Interrupt
-  timer.begin(); //Start the Timer
-
-
   #ifdef __DEBUG__
     Serial.begin(9600);
   #endif
@@ -209,9 +179,9 @@ void update(int* ang, int* specgrav)
 
 void loop() 
 { // main stuff
-  digitalWrite(PIN_ENABLE_SENSORS_3V3, HIGH);
-  digitalWrite(PIN_ENABLE_I2C_PULLUP, HIGH);
-  BLE.begin();
+ digitalWrite(PIN_ENABLE_SENSORS_3V3, HIGH);
+ digitalWrite(PIN_ENABLE_I2C_PULLUP, HIGH);
+ BLE.begin();
   int majdat, mindat;
   update(&majdat, &mindat);
   byte major[2];
@@ -236,21 +206,10 @@ void loop()
 #ifdef __WDT__
   WDT.kick();
 #endif
+
 digitalWrite(PIN_ENABLE_SENSORS_3V3, LOW);
-digitalWrite(PIN_ENABLE_I2C_PULLUP, LOW);
+digitalWrite(PIN_ENABLE_I2C_PULLUP, LOW);\
 BLE.end();
-//NRF_POWER -> SYSTEMOFF = 1;
-while(!Runnow){
-  __WFI();
-}
-Runnow = false;
 
-}
-
-extern "C"
-{
-    void TIMER0_IRQHandler_v (void)  //Interrupt Handler for Timer0
-    {
-        timer.TIMER0_ISR(); //Call the API's Interrupt Routine, so it can choose the function to run.
-    }
+delay(DELAY_TIME_SECONDS * 1000);
 }

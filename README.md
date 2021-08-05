@@ -30,3 +30,9 @@ https://www.amazon.com/gp/product/B00GN3PN46/ref=ppx_yo_dt_b_search_asin_title?i
 
 *Canning wax*: (I found this at my grocery store for a better price, but this is here as an example)
 https://www.amazon.com/203-060-005-Household-Paraffin-Wax-GULFWAX-PARAFFIN/dp/B01FDJP88Q/ref=sr_1_3?dchild=1&keywords=Canning+wax&qid=1628014851&sr=8-3
+
+## 3D Printed Parts:
+
+Both parts can be found on the below thingiverse link. I printed at 5% gyroid infill, too keep density close I would use the same value. 
+
+https://www.thingiverse.com/thing:4925391

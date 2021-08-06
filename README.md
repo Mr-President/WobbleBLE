@@ -71,4 +71,4 @@ The biggest step forward in this project would be a decrease in power consumptio
 As for accuracy in the future I would like to look at an averaging system to take several readings quickly average them and then use that for the angle value. 
 
 
-At this time information from the device can only be read using either an iBeacon scanner or already existing applications and raspberry pi builds for a similar commercialized product. I intend to start work on a raspberry pi application that will serve a similar purpose and integrate with brewfather software but there is a lot of learning I need to do first. 
+At this time information from the device can only be read using either an iBeacon scanner or anything that reads ibeacon information. I am hoping to create a stand alone applciation to monitor the beacon. 

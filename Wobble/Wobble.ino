@@ -49,19 +49,19 @@ NRF_UART0->ENABLE = 0;
 }
 
 /**************************************
- * TILT Color Definitions
+ * WOB Color Definitions
  **************************************/
-#define TILT_RED            0x10
-#define TILT_GRN            0x20
-#define TILT_BLK            0x30
-#define TILT_PUR            0x40
-#define TILT_ORNG           0x50
-#define TILT_BLU            0x60
-#define TILT_YLW            0x70
-#define TILT_PNK            0x80
+#define WOB_1            0x10
+#define WOB_2            0x20
+#define WOB_3            0x30
+#define WOB_4           0x40
+#define WOB_5           0x50
+#define WOB_6            0x60
+#define WOB_7            0x70
+#define WOB_8            0x80
 
-#define TILT_COLOR          TILT_BLK //Choose which color to report as
-#define TILT_COLOR_UUID_LOC 3        //Location in UUID that represents color: shouldn't need to be changed
+#define WOB_COLOR          WOB_4 //Choose which color to report as
+#define WOB_COLOR_UUID_LOC 3        //Location in UUID that represents color: shouldn't need to be changed
 
 Nano33BLEAccelerometerData accelerometerData;
 Nano33BLETemperatureData temperatureData;
@@ -145,7 +145,7 @@ int angle_to_sg(){
 byte _uuidarray[16]; //empty byte array to store the UUID once we convert it
 
 void setup() {
-  //Base ID String, UUID is specific, and UUID includes color used (set color in #define TILT_COLOR)
+  //Base ID String, UUID is specific, and UUID includes color used (set color in #define WOB_COLOR)
   String id ="A495BB00C5B14B44B5121370F02D74DE";
 
   //Disable LEDs
@@ -155,8 +155,8 @@ void setup() {
 
   //Convert UUID to a byte array
   string_to_byte(id, _uuidarray);
-  //Set Tilt App color in UUID
-  _uuidarray[TILT_COLOR_UUID_LOC] = TILT_COLOR;
+  //Set WOB App color in UUID
+  _uuidarray[WOB_COLOR_UUID_LOC] = WOB_COLOR;
 
   #ifdef __DEBUG__
     Serial.begin(9600);

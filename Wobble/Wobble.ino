@@ -49,18 +49,18 @@ NRF_UART0->ENABLE = 0;
 }
 
 /**************************************
- * WOB Color Definitions
+ * WOB Color Definitions to help you keep multiple straight
  **************************************/
-#define WOB_1            0x10
-#define WOB_2            0x20
-#define WOB_3            0x30
-#define WOB_4           0x40
-#define WOB_5           0x50
-#define WOB_6            0x60
-#define WOB_7            0x70
-#define WOB_8            0x80
+#define WOB_Red            0x10
+#define WOB_Grn            0x20
+#define WOB_Blk            0x30
+#define WOB_Prpl           0x40
+#define WOB_Org            0x50
+#define WOB_Blu            0x60
+#define WOB_Ylw            0x70
+#define WOB_Pnk            0x80
 
-#define WOB_COLOR          WOB_4 //Choose which color to report as
+#define WOB_COLOR          WOB_Grn //Choose which color to report as
 #define WOB_COLOR_UUID_LOC 3        //Location in UUID that represents color: shouldn't need to be changed
 
 Nano33BLEAccelerometerData accelerometerData;

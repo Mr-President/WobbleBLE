@@ -1,4 +1,9 @@
 # Wobble on Arduino Nano 33 BLE
+
+##Updates
+
+First real test in a ferementor has gone... less than idea. High krausen impacts the reading heavily and it looks like over time there are ocassionally issues that lead to erronous readings. I believe this is due to the accelerometer not reading a value so the SG calculation returns a extremely high number. Will work on a fix. 
+
 ## Introduction:
 
 First and formost let me caviate this all by saying I am not a software engineer so the code contained here is likely rough. The higest quality portion is the watchdog written by Acellama88.

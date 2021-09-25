@@ -3,6 +3,7 @@
 #include "ArduinoNanoBLE33_Watchdog.h"
 #include <math.h>
 #include <ArduinoBLE.h>
+#include <Arduino.h>
 
 /**************************************
  * Compilation Adders
@@ -11,19 +12,56 @@
 #define __WDT__             //Adds configuring the Watchdog Timer
 
 /**************************************
- * TILT Color Definitions
+ * BLE Duty Cycle
  **************************************/
-#define TILT_RED            0x10
-#define TILT_GRN            0x20
-#define TILT_BLK            0x30
-#define TILT_PUR            0x40
-#define TILT_ORNG           0x50
-#define TILT_BLU            0x60
-#define TILT_YLW            0x70
-#define TILT_PNK            0x80
+#define BLE_ON_TIME_SECONDS 5  //How long to leave on BLE Advertise
+#define DELAY_TIME_SECONDS 15  //How long to wait before re-enabling BLE
 
-#define TILT_COLOR          TILT_BLK //Choose which color to report as
-#define TILT_COLOR_UUID_LOC 3        //Location in UUID that represents color: shouldn't need to be changed
+/**************************************
+ * Disable UART
+ **************************************/
+int main(void){
+init();
+initVariant();
+
+//Disabling UART0 (saves around 300-500µA) - @Jul10199555 contribution
+NRF_UART0->TASKS_STOPTX = 1;
+NRF_UART0->TASKS_STOPRX = 1;
+NRF_UART0->ENABLE = 0;
+
+*(volatile uint32_t *)0x40002FFC = 0;
+*(volatile uint32_t *)0x40002FFC;
+*(volatile uint32_t *)0x40002FFC = 1; //Setting up UART registers again due to a library issue
+
+//Removing USB CDC feature
+//#if defined(SERIAL_CDC)
+//  PluggableUSBD().begin();
+//  SerialUSB.begin(115200);
+//#endif
+
+  setup();
+  for(;;){
+    loop();
+//If you won't be using serial communication comment next line
+//    if(arduino::serialEventRun) arduino::serialEventRun();
+  }
+  return 0;
+}
+
+/**************************************
+ * WOB Color Definitions to help you keep multiple straight
+ **************************************/
+#define WOB_Red            0x10
+#define WOB_Grn            0x20
+#define WOB_Blk            0x30
+#define WOB_Prpl           0x40
+#define WOB_Org            0x50
+#define WOB_Blu            0x60
+#define WOB_Ylw            0x70
+#define WOB_Pnk            0x80
+
+#define WOB_COLOR          WOB_Grn //Choose which color to report as
+#define WOB_COLOR_UUID_LOC 3        //Location in UUID that represents color: shouldn't need to be changed
 
 Nano33BLEAccelerometerData accelerometerData;
 Nano33BLETemperatureData temperatureData;
@@ -37,15 +75,9 @@ int count = 1;  //Number of packets sent
 
 #include "ArduinoNanoBLE33_Watchdog.h"
 Nano33Watchdog WDT;
-#define WATCHDOG_TIMER_SECONDS 60  //How much time must pass before resetting the micro
+#define WATCHDOG_TIMER_SECONDS 180  //How much time must pass before resetting the micro
 
 #endif
-
-/**************************************
- * BLE Duty Cycle
- **************************************/
-#define BLE_ON_TIME_SECONDS 5  //How long to leave on BLE Advertise
-#define DELAY_TIME_SECONDS 10  //How long to wait before re-enabling BLE
 
 
 void string_to_byte(String _uuid, byte bytes[]) //voodoo black magic that I took from some other code and had a software engineer help make work better
@@ -76,13 +108,14 @@ void transmit(byte _uuid[16], byte _major[2], byte _minor[2]) //function transmi
 
 float angle()
 {
+  Accelerometer.begin();
   float angle;
     if(Accelerometer.pop(accelerometerData))
     {
       float x = accelerometerData.x; //get x y z data and put them into variables
       float y = accelerometerData.y;
       float z = accelerometerData.z;
-      float mag = sqrt(sq(x) + sq(y) + sq(z)); // find the magnitude of the overall vector
+      float mag = 1; // magnitude of the full vector should be 1
       float xmag = abs(x); // abosolute value of x because its fucked
       float oh = xmag / mag; // ratio of opposite(the x value) and the hypotonuse (the total vector length)
       float degree = asin(oh); //arcsine returns the angle this makes to the perpendicular 
@@ -92,12 +125,13 @@ float angle()
 }
 
 int angle_to_sg(){
-  float ang = angle();
-  float sg = -1.52624*ang + 1104;
-  int rsg = sg;
-  return(rsg);
+  int ang = angle()*100;
+  int sg = -.069725*ang + 1560.3;
+  return(sg);
 }
+
 /*int temperature()
+  IN PROGRESS
 {
   int temp;
   if(Temperature.pop(temperatureData))
@@ -111,30 +145,27 @@ int angle_to_sg(){
 byte _uuidarray[16]; //empty byte array to store the UUID once we convert it
 
 void setup() {
-  //Base ID String, UUID is specific, and UUID includes color used (set color in #define TILT_COLOR)
+  //Base ID String, UUID is specific, and UUID includes color used (set color in #define WOB_COLOR)
   String id ="A495BB00C5B14B44B5121370F02D74DE";
 
   //Disable LEDs
   pinMode(LED_BUILTIN, OUTPUT); //sets the L led to low
+  digitalWrite(LED_BUILTIN, LOW);
   digitalWrite(LED_PWR, LOW); //sets the power LED to low
 
   //Convert UUID to a byte array
   string_to_byte(id, _uuidarray);
-  //Set Tilt App color in UUID
-  _uuidarray[TILT_COLOR_UUID_LOC] = TILT_COLOR;
+  //Set WOB App color in UUID
+  _uuidarray[WOB_COLOR_UUID_LOC] = WOB_COLOR;
 
-  //Turn on Accelerometer and BLE
-  Accelerometer.begin();
-  BLE.begin();
+  #ifdef __DEBUG__
+    Serial.begin(9600);
+  #endif
 
-#ifdef __DEBUG__
-  Serial.begin(9600);
-#endif
-
-#ifdef __WDT__
-  WDT.setTimerSeconds(WATCHDOG_TIMER_SECONDS);
-  WDT.begin();
-#endif
+  #ifdef __WDT__
+    WDT.setTimerSeconds(WATCHDOG_TIMER_SECONDS);
+    WDT.begin();
+  #endif
 }
 
 void update(int* ang, int* specgrav)
@@ -148,6 +179,9 @@ void update(int* ang, int* specgrav)
 
 void loop() 
 { // main stuff
+ digitalWrite(PIN_ENABLE_SENSORS_3V3, HIGH);
+ digitalWrite(PIN_ENABLE_I2C_PULLUP, HIGH);
+ BLE.begin();
   int majdat, mindat;
   update(&majdat, &mindat);
   byte major[2];
@@ -173,5 +207,9 @@ void loop()
   WDT.kick();
 #endif
 
-  delay(DELAY_TIME_SECONDS * 1000);
+digitalWrite(PIN_ENABLE_SENSORS_3V3, LOW);
+digitalWrite(PIN_ENABLE_I2C_PULLUP, LOW);\
+BLE.end();
+
+delay(DELAY_TIME_SECONDS * 1000);
 }

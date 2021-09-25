@@ -48,6 +48,10 @@ https://www.thingiverse.com/thing:4925391
 
 The Arduino can be programmed through the Arduino interface. Download all the files in the “Wobble” folder and place them in the same folder. Open the Wobble.ino file in the Arduino editor and program as you would any other Arduino. If you want to make changes to the refresh rate (default 15 seconds max of 180 seconds before watchdog resets Arduino) then now is the time to do it. There is minimal power savings by increasing the advertise delay so I would recommend leaving it at 15 seconds. You may also change the linear fit here but for the first use you will likely need to use the default code. 
 
+## Libraries ##
+
+Two libraries are used for this project.  The first is the [ArduinoBLE Library](https://www.arduino.cc/en/Reference/ArduinoBLE) and the second is the [Nano33BLESensor](https://create.arduino.cc/projecthub/dgiancono/nano33blesensor-getting-started-with-the-nano-33-ble-sense-8a7eba).  The rest of the code uses the default Arduino Nano 33 BLE MBED OS Board Manager v1.1.6 (which has since been deprecated). This is due to the use of the Circular Buffer in the Nano33BLESensor library.
+
 ## Modifying and Powering Arduino:
 
 The CR123a batter supplies an average of 3 volts over its lifetime so it can be used to directly power the Arduino nano through the 3.3V and ground pins. Please reference the schematics on the Arduino info page linked below and in the parts list. This will show you exactly where to solder the connections. Red wire should connect to the 3V3 and black to the ground. Then the red wire (or the positive wire) should be soldered to the non-spring portion of the battery contacts. Black (or the negative wire) should then be soldered to the spring-loaded portion of the contacts. This must be done correctly, or you could damage your Arduino. It is also worth noting that you need enough wire to span to connect to the contacts but too much wire will make it difficult to fit in the container. Trim wires to length for best fit. 
